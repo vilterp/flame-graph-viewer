@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import ReactDOM from "react-dom";
 import { FlameGraph } from "react-flame-graph";
 import { z } from "zod";
@@ -46,15 +46,14 @@ function App() {
   );
 }
 
-function TopTable(props: { flameGraph: Node }) {
-  const flattened = flatten(props.flameGraph);
-  console.log("flattened", flattened);
+const columns = [
+  { Header: "Self", accessor: "self" },
+  { Header: "Total", accessor: "total" },
+  { Header: "Name", accessor: "name" },
+];
 
-  const columns = [
-    { Header: "Self", accessor: "self" },
-    { Header: "Total", accessor: "total" },
-    { Header: "Name", accessor: "name" },
-  ];
+function TopTable(props: { flameGraph: Node }) {
+  const flattened = useMemo(() => flatten(props.flameGraph), [props.flameGraph]);
 
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
     useTable({ columns: columns, data: flattened }, useSortBy);
@@ -95,7 +94,6 @@ function TopTable(props: { flameGraph: Node }) {
                   style={{
                     padding: "10px",
                     border: "solid 1px gray",
-                    background: "papayawhip",
                   }}
                 >
                   {cell.render("Cell")}
