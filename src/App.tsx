@@ -33,7 +33,7 @@ function App() {
           {JSON.stringify(parsed.errors)}
         </p>
       ) : (
-        <FlameGraph data={json} height={800} width={1000} />
+        <FlameGraph data={parsed.data} height={800} width={1400} />
       )}
     </div>
   );
