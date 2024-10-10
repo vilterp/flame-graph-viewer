@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import { FlameGraph } from "react-flame-graph";
 import { z } from "zod";
 import { sum } from "lodash";
-import { useTable, useSortBy } from "react-table";
+import { useTable, useSortBy, Column } from "react-table";
 
 const nodeSchema = z.object({
   name: z.string(),
@@ -46,14 +46,31 @@ function App() {
   );
 }
 
-const columns = [
-  { Header: "Self", accessor: "self" },
-  { Header: "Total", accessor: "total" },
-  { Header: "Name", accessor: "name" },
-];
-
 function TopTable(props: { flameGraph: Node }) {
-  const flattened = useMemo(() => flatten(props.flameGraph), [props.flameGraph]);
+  const rootValue = props.flameGraph.value;
+
+  const flattened = useMemo(
+    () => flatten(props.flameGraph),
+    [props.flameGraph]
+  );
+
+  const columns = useMemo(() => {
+    return [
+      {
+        Header: "Self",
+        accessor: "self",
+        Cell: (props: any) =>
+          `${props.value} (${Math.round(props.value / rootValue * 100)}%)`,
+      },
+      {
+        Header: "Total",
+        accessor: "total",
+        Cell: (props: any) =>
+          `${props.value} (${Math.round(props.value / rootValue * 100)}%)`,
+      },
+      { Header: "Name", accessor: "name" },
+    ];
+  }, [props.flameGraph]);
 
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
     useTable({ columns: columns, data: flattened }, useSortBy);
