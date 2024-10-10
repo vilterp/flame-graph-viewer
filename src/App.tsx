@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
-import FlameGraph from "react-flame-graph";
+import { FlameGraph } from "react-flame-graph";
 
 function App() {
   const [json, setJson] = useState("");
