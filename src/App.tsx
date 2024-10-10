@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import { FlameGraph } from "react-flame-graph";
+import { z } from "zod";
+
+const nodeSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+  tooltip: z.string().optional(),
+  backgroundColor: z.string().optional(),
+  color: z.string().optional(),
+  children: z.array(z.lazy(() => nodeSchema)).optional(),
+});
 
 function App() {
   const [json, setJson] = useState("");
@@ -19,7 +29,9 @@ function App() {
       />
 
       {parsed.type === "err" ? (
-        <p style={{ color: "red" }}>Invalid JSON</p>
+        <p style={{ color: "red", fontFamily: "monospace" }}>
+          {JSON.stringify(parsed.errors)}
+        </p>
       ) : (
         <FlameGraph data={json} height={800} width={1000} />
       )}
@@ -29,9 +41,15 @@ function App() {
 
 function tryParse(json: string) {
   try {
-    return { type: "ok", body: JSON.parse(json) };
+    const parsed = JSON.parse(json);
+    const result = nodeSchema.safeParse(parsed);
+    if (result.success) {
+      return { type: "ok", data: result.data };
+    } else {
+      return { type: "err", errors: result.error.errors };
+    }
   } catch (e) {
-    return { type: "err" };
+    return { type: "err", errors: [{ message: "Invalid JSON format" }] };
   }
 }
 
