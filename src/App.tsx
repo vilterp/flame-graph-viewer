@@ -60,20 +60,26 @@ function TopTable(props: { flameGraph: Node }) {
         Header: "Self",
         accessor: "self",
         Cell: (props: any) =>
-          `${props.value} (${Math.round(props.value / rootValue * 100)}%)`,
+          `${props.value} (${Math.round((props.value / rootValue) * 100)}%)`,
       },
       {
         Header: "Total",
         accessor: "total",
         Cell: (props: any) =>
-          `${props.value} (${Math.round(props.value / rootValue * 100)}%)`,
+          `${props.value} (${Math.round((props.value / rootValue) * 100)}%)`,
       },
       { Header: "Name", accessor: "name" },
     ];
   }, [props.flameGraph]);
 
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
-    useTable({ columns: columns, data: flattened }, useSortBy);
+    useTable(
+      {
+        columns: columns,
+        data: flattened,
+      },
+      useSortBy
+    );
 
   return (
     <table {...getTableProps()} style={{ border: "solid 1px black" }}>
@@ -139,8 +145,8 @@ function flatten(node: Node): FlattenedNode[] {
 function recursiveFlatten(node: Node, out: FlattenedNode[]) {
   out.push({
     name: node.name,
-    self: node.value,
-    total: sum(node.children.map((child) => child.value)),
+    total: node.value,
+    self: node.value - sum(node.children.map((child) => child.value)),
   });
   node.children.forEach((child) => recursiveFlatten(child, out));
 }
