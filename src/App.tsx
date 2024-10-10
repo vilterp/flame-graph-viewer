@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import { FlameGraph } from "react-flame-graph";
 import { z } from "zod";
+import { sum } from "lodash";
+import { useTable, useSortBy } from "react-table";
 
 const nodeSchema = z.object({
   name: z.string(),
@@ -9,8 +11,10 @@ const nodeSchema = z.object({
   tooltip: z.string().optional(),
   backgroundColor: z.string().optional(),
   color: z.string().optional(),
-  children: z.array(z.lazy(() => nodeSchema)).optional(),
+  children: z.array(z.lazy(() => nodeSchema)),
 });
+
+type Node = z.infer<typeof nodeSchema>;
 
 function App() {
   const [json, setJson] = useState("");
@@ -28,28 +32,109 @@ function App() {
         placeholder="Paste JSON here"
       />
 
-      {parsed.type === "err" ? (
-        <p style={{ color: "red", fontFamily: "monospace" }}>
-          {JSON.stringify(parsed.errors)}
-        </p>
+      {parsed.success ? (
+        <>
+          <FlameGraph data={parsed.data} height={400} width={1400} />
+          <TopTable flameGraph={parsed.data} />
+        </>
       ) : (
-        <FlameGraph data={parsed.data} height={800} width={1400} />
+        <p style={{ color: "red", fontFamily: "monospace" }}>
+          {JSON.stringify(parsed.error)}
+        </p>
       )}
     </div>
   );
 }
 
-function tryParse(json: string) {
+function TopTable(props: { flameGraph: Node }) {
+  const flattened = flatten(props.flameGraph);
+  console.log("flattened", flattened);
+
+  const columns = [
+    { Header: "Self", accessor: "self" },
+    { Header: "Total", accessor: "total" },
+    { Header: "Name", accessor: "name" },
+  ];
+
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
+    useTable({ columns: columns, data: flattened }, useSortBy);
+
+  return (
+    <table {...getTableProps()} style={{ border: "solid 1px black" }}>
+      <thead>
+        {headerGroups.map((headerGroup) => (
+          <tr {...headerGroup.getHeaderGroupProps()}>
+            {headerGroup.headers.map((column) => (
+              <th
+                {...column.getHeaderProps(column.getSortByToggleProps())}
+                style={{
+                  borderBottom: "solid 3px red",
+                  background: "aliceblue",
+                  color: "black",
+                  fontWeight: "bold",
+                }}
+              >
+                {column.render("Header")}
+                {/* Add a sort direction indicator */}
+                <span>
+                  {column.isSorted ? (column.isSortedDesc ? " 🔽" : " 🔼") : ""}
+                </span>
+              </th>
+            ))}
+          </tr>
+        ))}
+      </thead>
+      <tbody {...getTableBodyProps()}>
+        {rows.map((row) => {
+          prepareRow(row);
+          return (
+            <tr {...row.getRowProps()}>
+              {row.cells.map((cell) => (
+                <td
+                  {...cell.getCellProps()}
+                  style={{
+                    padding: "10px",
+                    border: "solid 1px gray",
+                    background: "papayawhip",
+                  }}
+                >
+                  {cell.render("Cell")}
+                </td>
+              ))}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+type FlattenedNode = {
+  name: string;
+  self: number;
+  total: number;
+};
+
+function flatten(node: Node): FlattenedNode[] {
+  const out: FlattenedNode[] = [];
+  recursiveFlatten(node, out);
+  return out;
+}
+
+function recursiveFlatten(node: Node, out: FlattenedNode[]) {
+  out.push({
+    name: node.name,
+    self: node.value,
+    total: sum(node.children.map((child) => child.value)),
+  });
+  node.children.forEach((child) => recursiveFlatten(child, out));
+}
+
+function tryParse(json: string): z.SafeParseReturnType<string, Node> {
   try {
-    const parsed = JSON.parse(json);
-    const result = nodeSchema.safeParse(parsed);
-    if (result.success) {
-      return { type: "ok", data: result.data };
-    } else {
-      return { type: "err", errors: result.error.errors };
-    }
+    return nodeSchema.safeParse(JSON.parse(json));
   } catch (e) {
-    return { type: "err", errors: [{ message: "Invalid JSON format" }] };
+    return { success: false, error: e };
   }
 }
 
